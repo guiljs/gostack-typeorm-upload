@@ -1,4 +1,4 @@
-import { getRepository, CreateDateColumn } from 'typeorm';
+import { getRepository, getCustomRepository } from 'typeorm';
 import AppError from '../errors/AppError';
 
 import Transaction from '../models/Transaction';
@@ -19,6 +19,16 @@ class CreateTransactionService {
     category,
   }: Request): Promise<Transaction> {
     const categoriesRepository = getRepository(Category);
+    const transactionsRepository = getCustomRepository(TransactionsRepository);
+
+    if (type === 'outcome') {
+      const hasValidBalance =
+        (await transactionsRepository.getBalance()).total - value >= 0;
+
+      if (!hasValidBalance) {
+        throw new AppError('Not enough balance');
+      }
+    }
 
     let categ = await categoriesRepository.findOne({ title: category });
 
@@ -29,7 +39,6 @@ class CreateTransactionService {
 
     const category_id = categ.id;
 
-    const transactionsRepository = getRepository(Transaction);
     const transaction = transactionsRepository.create({
       title,
       value,
